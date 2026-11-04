@@ -1,0 +1,424 @@
+<title>Foreman Tilt Cart</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-column shop sheet. 3D stage first, then controls + live readouts, then key + notes; pairs go two-up on wide screens. */
+:root{
+  --bg:#f2f3f1;--surface:#ffffff;--stage:#e3e6e2;--ink:#1a1c1e;--muted:#59606a;--line:#cdd2cd;
+  --accent:#c94c0a;--on-accent:#ffffff;--grid1:#a3a9a3;--grid2:#c6cbc5;--chip:rgba(255,255,255,.92);
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#131517;--surface:#1b1e21;--stage:#202427;--ink:#e8eae7;--muted:#9ba2a9;--line:#32383d;
+  --accent:#ff7b36;--on-accent:#1b0d03;--grid1:#4a5157;--grid2:#2e3338;--chip:rgba(27,30,33,.92);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131517;--surface:#1b1e21;--stage:#202427;--ink:#e8eae7;--muted:#9ba2a9;--line:#32383d;
+  --accent:#ff7b36;--on-accent:#1b0d03;--grid1:#4a5157;--grid2:#2e3338;--chip:rgba(27,30,33,.92);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:18px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-family:var(--f-display);font-weight:600;font-size:clamp(36px,6vw,54px);line-height:1;margin:6px 0 8px;letter-spacing:.01em;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:62ch}
+.stage{position:relative;height:clamp(330px,68vw,600px);border:1px solid var(--line);border-radius:10px;background:var(--stage);overflow:hidden;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.stage:active{cursor:grabbing}
+.stage canvas{display:block;width:100%;height:100%}
+.labels{position:absolute;inset:0;pointer-events:none}
+.lbl{position:absolute;transform:translate(-50%,-125%);font-family:var(--f-mono);font-size:11px;line-height:1.3;padding:2px 6px;border-radius:4px;background:var(--chip);border:1px solid var(--line);color:var(--ink);white-space:nowrap}
+.hint,.badge{position:absolute;font-family:var(--f-mono);font-size:11px;color:var(--muted);pointer-events:none}
+.hint{right:10px;top:9px}
+.badge{left:10px;bottom:9px}
+.fail{position:absolute;inset:auto 16px 16px;margin:0;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+h2{font-family:var(--f-display);font-weight:600;font-size:22px;line-height:1.1;margin:0 0 12px;letter-spacing:.02em}
+.row{display:flex;align-items:center;gap:12px}
+input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:28px}
+.deg{font-family:var(--f-mono);font-size:22px;min-width:3.4ch;text-align:right;font-variant-numeric:tabular-nums}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.seg button{font:500 14px/1 var(--f-body);padding:0 12px;min-height:40px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sub{font-family:var(--f-mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:16px 0 0}
+.toggle{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:14px;color:var(--muted)}
+.toggle input{accent-color:var(--accent);width:18px;height:18px}
+.state{display:inline-block;font-family:var(--f-mono);font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--accent);color:var(--accent);margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.stat{border-top:2px solid var(--line);padding-top:8px;min-width:0}
+.stat .k{font-size:13px;color:var(--muted)}
+.stat .v{font-family:var(--f-mono);font-size:19px;font-variant-numeric:tabular-nums}
+.check{margin:14px 0 0;padding:10px 12px;border-radius:8px;background:var(--stage);font-size:14px}
+.legend{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;font-size:14px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:8px;vertical-align:-1px;border:1px solid var(--line)}
+.notes{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:grid;gap:6px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Onefinity PRO Foreman · 48 × 48 in cut · Makita router</p>
+    <h1>Foreman tilt cart</h1>
+    <p class="lede">Steel cart in 2x2x11 ga tube. It cuts flat and parks upright on two pillow blocks. Dimensions in inches.</p>
+  </header>
+
+  <div class="stage" id="stage" role="img" aria-label="3D model of the steel tilt cart carrying the CNC router, tilting from horizontal to vertical">
+    <div class="labels" id="labels"></div>
+    <span class="hint">Drag to orbit · pinch to zoom</span>
+    <span class="badge" id="badge" hidden>Simplified renderer</span>
+  </div>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="h-tilt">
+      <h2 id="h-tilt">Tilt</h2>
+      <div class="row">
+        <input type="range" id="tilt" min="0" max="90" step="1" value="0" aria-label="Tilt angle in degrees">
+        <span class="deg" id="deg">0°</span>
+      </div>
+      <div class="seg" id="presets">
+        <button type="button" data-t="0" aria-pressed="true">Cutting 0°</button>
+        <button type="button" data-t="80" aria-pressed="false">Lean 80°</button>
+        <button type="button" data-t="90" aria-pressed="false">Parked 90°</button>
+      </div>
+      <p class="sub">View</p>
+      <div class="seg" id="views">
+        <button type="button" data-v="iso" aria-pressed="true">Three-quarter</button>
+        <button type="button" data-v="end" aria-pressed="false">End (along pivot)</button>
+        <button type="button" data-v="side" aria-pressed="false">Side</button>
+      </div>
+      <label class="toggle"><input type="checkbox" id="lbl" checked> Show labels</label>
+    </section>
+
+    <section class="card" aria-labelledby="h-now">
+      <h2 id="h-now">At this angle</h2>
+      <span class="state" id="state">Cutting position</span>
+      <div class="stats">
+        <div class="stat"><div class="k">Lowest point of top</div><div class="v" id="r-low">34.0 in</div></div>
+        <div class="stat"><div class="k">Overall height</div><div class="v" id="r-high">50 in</div></div>
+        <div class="stat"><div class="k">Floor footprint</div><div class="v" id="r-foot">64 × 74 in</div></div>
+        <div class="stat"><div class="k">Floor area</div><div class="v" id="r-area">32.9 sq ft</div></div>
+      </div>
+      <p class="check" id="check">Props in and shimmed, both lock pins in the 0° holes, leveling feet down so the casters carry no load.</p>
+    </section>
+  </div>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="h-key">
+      <h2 id="h-key">Key</h2>
+      <ul class="legend">
+        <li><span class="sw" style="background:#4f555c"></span>2x2x11 ga tube</li>
+        <li><span class="sw" style="background:#7c828a"></span>3/8 in plate</li>
+        <li><span class="sw" style="background:#e0570f"></span>1 in pillow blocks</li>
+        <li><span class="sw" style="background:#c62828"></span>Pull-pin props</li>
+        <li><span class="sw" style="background:#d6ad74"></span>Baltic birch sub-top</li>
+        <li><span class="sw" style="background:#9b7751"></span>MDF wasteboard</li>
+        <li><span class="sw" style="background:#c5c9cf"></span>Rails, axles, pins</li>
+        <li><span class="sw" style="background:#2a2c30"></span>Motors, feet, casters</li>
+      </ul>
+    </section>
+    <section class="card" aria-labelledby="h-notes">
+      <h2 id="h-notes">Clearance notes</h2>
+      <ul class="notes">
+        <li>Posts sit at ±36 in. At 90° the descending Y stepper swings to about 7 in off the floor, which would hit end rails at ±33.</li>
+        <li>Lowest point of the top when parked is about 5 in. Cables and drag chain are not modeled.</li>
+        <li>Pivot at 35 in puts the wasteboard near 37.5 in when cutting.</li>
+        <li>Massing model. Measure the delivered machine before cutting steel.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $=function(s){return document.querySelector(s);};
+  var PIV=35, D2R=Math.PI/180;
+  var MAT={steel:'#4f555c',plate:'#7c828a',wood:'#d6ad74',mdf:'#9b7751',alu:'#c5c9cf',black:'#2a2c30',bearing:'#e0570f',red:'#c62828',router:'#1d7c8a'};
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- geometry (inches; x across cart, y up, z along pivot) ----------
+  var parts=[];
+  function box(g,s,p,m,tag){parts.push({k:'box',g:g,s:s,p:p,m:m,tag:tag});}
+  function cyl(g,r,len,ax,p,m,tag){parts.push({k:'cyl',g:g,r:r,len:len,ax:ax,p:p,m:m,tag:tag});}
+  function strut(g,a,b,w,m,tag){parts.push({k:'strut',g:g,a:a,b:b,w:w,m:m,tag:tag});}
+
+  // base frame
+  [-17,17].forEach(function(x){box('base',[2,2,70],[x,6,0],'steel');});
+  [-36,36].forEach(function(z){
+    var s=Math.sign(z);
+    box('base',[36,2,2],[0,6,z],'steel');
+    box('base',[2,26,2],[0,20,z],'steel');
+    strut('base',[-16,7,z],[-1,31,z],2,'steel');
+    strut('base',[16,7,z],[1,31,z],2,'steel');
+    box('base',[5,0.375,4],[0,33.19,z],'plate');
+    box('base',[5,0.7,1.6],[0,33.73,z],'bearing');
+    cyl('base',1.3,1.6,'z',[0,35,z],'bearing');
+    box('base',[1.6,2.4,0.75],[0,32.2,z-s*1.375],'plate');
+    cyl('base',0.3,1.6,'z',[0,32.4,z-s*1.8],'alu');
+  });
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(c){
+    var x=c[0]*16.5, z=c[1]*34.5, lx=c[0]*12.5, lz=c[1]*36;
+    box('base',[3.2,0.25,3.2],[x,4.875,z],'plate');
+    box('base',[1.8,2.4,1.4],[x,3.55,z],'black');
+    cyl('base',2,1.3,'x',[x,2,z],'black');
+    cyl('base',0.25,3.6,'y',[lx,3.2,lz],'alu');
+    cyl('base',1.1,0.45,'y',[lx,1.2,lz],'black');
+  });
+  [-26,26].forEach(function(z){
+    box('base',[2,26,2],[17,20,z],'steel');
+    cyl('base',0.25,1,'y',[17,33.5,z],'alu');
+    box('base',[1.5,3,1.5],[-17,8.5,z],'plate');
+    box('base',[2,26,2],[-17,20,z],'red','prop');
+    cyl('base',0.25,1,'y',[-17,33.5,z],'alu','prop');
+  });
+
+  // rotating top (pivot at rail centerline)
+  [-29,29].forEach(function(z){box('top',[60,2,2],[0,0,z],'steel');});
+  [-29,29,-17,0,17].forEach(function(x){box('top',[2,2,56],[x,0,0],'steel');});
+  [-1,1].forEach(function(s){
+    box('top',[4,6,0.375],[0,1,s*30.19],'plate');
+    cyl('top',0.5,6.6,'z',[0,0,s*33.7],'alu');
+    cyl('top',3,0.375,'z',[0,0,s*33.9],'plate');
+  });
+  box('top',[60,0.75,60],[0,1.375,0],'wood');
+  box('top',[50,0.75,50],[0,2.125,0],'mdf');
+
+  // machine (simplified)
+  [-28,28].forEach(function(x){
+    [-28.5,28.5].forEach(function(z){box('top',[3,3,3],[x,3.25,z],'black');});
+    cyl('top',0.9,57,'z',[x,4.4,0],'alu');
+    cyl('top',0.9,57,'z',[x,6.8,0],'alu');
+    cyl('top',1.15,3.6,'z',[x,5.6,-31.8],'black');
+  });
+  [-28,28].forEach(function(x){box('gantry',[4,5,5.5],[x,10.2,0],'black');});
+  cyl('gantry',0.9,58,'x',[0,11.6,0],'alu');
+  cyl('gantry',0.9,58,'x',[0,14,0],'alu');
+  cyl('gantry',1.15,3.6,'x',[31.8,12.8,0],'black');
+  box('car',[5,7.5,2.5],[0,12.5,2.9],'black');
+  cyl('car',1.28,9.5,'y',[0,9,5.6],'router');
+  cyl('car',0.22,1.6,'y',[0,3.5,5.6],'alu');
+
+  var LABELS=[
+    {g:'base',p:[0,38.6,36],t:'Pivot · 35 in'},
+    {g:'base',p:[-17,22,26],t:'Pull-pin prop',show:function(){return tilt<0.5;}},
+    {g:'top',p:[33.6,15.2,0],t:'X motor end'},
+    {g:'top',p:[-12,2.6,29],t:'Top 60 × 60'},
+    {g:'base',p:[17,8,-14],t:'Base 36 × 74'}
+  ];
+
+  // ---------- state ----------
+  var tilt=0, W=1, H=1, dirty=true, lblOn=true;
+  var cam={th:0.78,ph:1.12,r:185,tgt:[0,28,0],fov:32};
+  var VIEWS={iso:{th:0.78,ph:1.12},end:{th:0.0001,ph:1.45},side:{th:Math.PI/2,ph:1.45}};
+  function carX(){return -22*Math.min(1,tilt/8);}
+  function toWorld(g,p){
+    if(g==='base')return [p[0],p[1],p[2]];
+    var x=p[0],y=p[1],z=p[2]; if(g==='car')x+=carX();
+    var r=tilt*D2R,c=Math.cos(r),s=Math.sin(r);
+    return [x*c-y*s, x*s+y*c+PIV, z];
+  }
+  function eye(){var t=cam.tgt;return [t[0]+cam.r*Math.sin(cam.ph)*Math.sin(cam.th), t[1]+cam.r*Math.cos(cam.ph), t[2]+cam.r*Math.sin(cam.ph)*Math.cos(cam.th)];}
+  function metrics(){
+    var r=tilt*D2R,c=Math.cos(r),s=Math.sin(r),xs=[],ys=[];
+    [-30.2,33.6].forEach(function(x){[-1,15].forEach(function(y){xs.push(x*c-y*s);ys.push(x*s+y*c);});});
+    var minX=Math.min.apply(null,[-18].concat(xs)), maxX=Math.max.apply(null,[18].concat(xs));
+    return {low:PIV+Math.min.apply(null,ys), high:Math.max(PIV+Math.max.apply(null,ys),38.4), minX:minX, maxX:maxX, w:maxX-minX};
+  }
+  function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+
+  // ---------- vector helpers ----------
+  function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+  function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+  function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+  function norm(a){var l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];}
+
+  // ---------- WebGL renderer ----------
+  function makeThree(canvas){
+    if(!window.THREE)throw new Error('three missing');
+    var gl=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
+    if(!gl.getContext())throw new Error('no webgl');
+    gl.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    var sc=new THREE.Scene();
+    var camera=new THREE.PerspectiveCamera(cam.fov,1,1,2000);
+    sc.add(new THREE.HemisphereLight(0xffffff,0x80868c,0.85));
+    var d1=new THREE.DirectionalLight(0xffffff,0.8);d1.position.set(60,120,80);sc.add(d1);
+    var d2=new THREE.DirectionalLight(0xffffff,0.25);d2.position.set(-80,40,-60);sc.add(d2);
+    var G={base:new THREE.Group(),top:new THREE.Group(),gantry:new THREE.Group(),car:new THREE.Group()};
+    sc.add(G.base);sc.add(G.top);G.top.position.y=PIV;G.top.add(G.gantry);G.gantry.add(G.car);
+    var mats={};
+    function M(k){if(!mats[k])mats[k]=new THREE.MeshStandardMaterial({color:MAT[k],roughness:k==='alu'?0.35:0.7,metalness:k==='alu'?0.55:0.15});return mats[k];}
+    var edgeMat=new THREE.LineBasicMaterial({color:0x000000,transparent:true,opacity:0.22});
+    var props=[];
+    parts.forEach(function(pt){
+      var geo,mesh;
+      if(pt.k==='box'){geo=new THREE.BoxGeometry(pt.s[0],pt.s[1],pt.s[2]);mesh=new THREE.Mesh(geo,M(pt.m));mesh.position.set(pt.p[0],pt.p[1],pt.p[2]);}
+      else if(pt.k==='cyl'){geo=new THREE.CylinderGeometry(pt.r,pt.r,pt.len,24);mesh=new THREE.Mesh(geo,M(pt.m));if(pt.ax==='x')mesh.rotation.z=Math.PI/2;if(pt.ax==='z')mesh.rotation.x=Math.PI/2;mesh.position.set(pt.p[0],pt.p[1],pt.p[2]);}
+      else{var a=new THREE.Vector3(pt.a[0],pt.a[1],pt.a[2]),b=new THREE.Vector3(pt.b[0],pt.b[1],pt.b[2]);geo=new THREE.BoxGeometry(pt.w,pt.w,a.distanceTo(b));mesh=new THREE.Mesh(geo,M(pt.m));mesh.position.copy(a.clone().add(b).multiplyScalar(0.5));mesh.lookAt(b);}
+      if(pt.k!=='cyl')mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),edgeMat));
+      G[pt.g].add(mesh); if(pt.tag==='prop')props.push(mesh);
+    });
+    var grid=null;
+    var fpGeo=new THREE.BufferGeometry();fpGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(15),3));
+    var fpMat=new THREE.LineBasicMaterial({color:0xc94c0a});var fp=new THREE.Line(fpGeo,fpMat);sc.add(fp);
+    function theme(){
+      if(grid){sc.remove(grid);grid.geometry.dispose();grid.material.dispose();}
+      grid=new THREE.GridHelper(144,12,new THREE.Color(cssv('--grid1')||'#a3a9a3'),new THREE.Color(cssv('--grid2')||'#c6cbc5'));sc.add(grid);
+      fpMat.color.set(cssv('--accent')||'#c94c0a');
+    }
+    theme();
+    return {
+      resize:function(w,h){gl.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();},
+      draw:function(){
+        G.top.rotation.z=tilt*D2R; G.car.position.x=carX();
+        props.forEach(function(m){m.visible=tilt<0.5;});
+        var m=metrics(),arr=fpGeo.attributes.position.array;
+        [[m.minX,-37],[m.maxX,-37],[m.maxX,37],[m.minX,37],[m.minX,-37]].forEach(function(q,i){arr[i*3]=q[0];arr[i*3+1]=0.08;arr[i*3+2]=q[1];});
+        fpGeo.attributes.position.needsUpdate=true;
+        var e=eye();camera.position.set(e[0],e[1],e[2]);camera.lookAt(cam.tgt[0],cam.tgt[1],cam.tgt[2]);
+        gl.render(sc,camera);
+      },
+      project:function(p){camera.updateMatrixWorld();var v=new THREE.Vector3(p[0],p[1],p[2]).project(camera);if(v.z>1)return null;return [(v.x+1)/2*W,(1-v.y)/2*H];},
+      theme:theme
+    };
+  }
+
+  // ---------- canvas 2D fallback (painter's algorithm) ----------
+  var FACES=[[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]];
+  function corners(pt){
+    var c=[],i;
+    if(pt.k==='strut'){
+      var d=norm(sub(pt.b,pt.a)),up=Math.abs(d[2])<0.9?[0,0,1]:[1,0,0],r=norm(cross(d,up)),u=cross(r,d),h=pt.w/2;
+      for(i=0;i<8;i++){var o=(i&4)?pt.b:pt.a,sx=(i&1)?h:-h,sy=(i&2)?h:-h;c.push([o[0]+r[0]*sx+u[0]*sy,o[1]+r[1]*sx+u[1]*sy,o[2]+r[2]*sx+u[2]*sy]);}
+      return c;
+    }
+    var s=pt.k==='box'?pt.s:pt.ax==='x'?[pt.len,2*pt.r,2*pt.r]:pt.ax==='y'?[2*pt.r,pt.len,2*pt.r]:[2*pt.r,2*pt.r,pt.len];
+    for(i=0;i<8;i++)c.push([pt.p[0]+((i&1)?0.5:-0.5)*s[0],pt.p[1]+((i&2)?0.5:-0.5)*s[1],pt.p[2]+((i&4)?0.5:-0.5)*s[2]]);
+    return c;
+  }
+  function shade(hex,l){var n=parseInt(hex.slice(1),16);return 'rgb('+Math.round(((n>>16)&255)*l)+','+Math.round(((n>>8)&255)*l)+','+Math.round((n&255)*l)+')';}
+  function make2D(canvas){
+    var ctx=canvas.getContext('2d');if(!ctx)throw new Error('no 2d');
+    var dpr=Math.min(window.devicePixelRatio||1,2);
+    var P2=parts.map(function(pt){return {g:pt.g,m:pt.m,tag:pt.tag,c:corners(pt)};});
+    var Ld=norm([0.45,1,0.65]),B=null;
+    function basis(){var e=eye(),f=norm(sub(cam.tgt,e)),r=norm(cross(f,[0,1,0])),u=cross(r,f);B={e:e,f:f,r:r,u:u,foc:(H/2)/Math.tan(cam.fov*D2R/2)};}
+    function view(p){var d=sub(p,B.e);return [dot(d,B.r),dot(d,B.u),dot(d,B.f)];}
+    function proj(v){return [W/2+v[0]*B.foc/v[2],H/2-v[1]*B.foc/v[2]];}
+    function seg(a,b){var va=view(a),vb=view(b);if(va[2]<1||vb[2]<1)return;var pa=proj(va),pb=proj(vb);ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);}
+    return {
+      resize:function(w,h){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);},
+      draw:function(){
+        basis();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+        ctx.lineWidth=1;ctx.strokeStyle=cssv('--grid2')||'#c6cbc5';ctx.beginPath();
+        for(var i=-72;i<=72;i+=12){seg([i,0,-72],[i,0,72]);seg([-72,0,i],[72,0,i]);}
+        ctx.stroke();
+        var m=metrics(),R4=[[m.minX,-37],[m.maxX,-37],[m.maxX,37],[m.minX,37]];
+        ctx.strokeStyle=cssv('--accent')||'#c94c0a';ctx.lineWidth=1.5;ctx.beginPath();
+        for(i=0;i<4;i++){var a=R4[i],b=R4[(i+1)%4];seg([a[0],0.05,a[1]],[b[0],0.05,b[1]]);}
+        ctx.stroke();
+        var polys=[];
+        P2.forEach(function(P){
+          if(P.tag==='prop'&&tilt>=0.5)return;
+          var w=P.c.map(function(p){return toWorld(P.g,p);}),vs=w.map(view),col=MAT[P.m];
+          FACES.forEach(function(f){
+            if(f.some(function(k){return vs[k][2]<1;}))return;
+            var q=f.map(function(k){return w[k];}),n=cross(sub(q[1],q[0]),sub(q[3],q[0])),nl=Math.hypot(n[0],n[1],n[2]);
+            if(nl<1e-6)return; n=[n[0]/nl,n[1]/nl,n[2]/nl];
+            var ctr=[(q[0][0]+q[2][0])/2,(q[0][1]+q[2][1])/2,(q[0][2]+q[2][2])/2];
+            if(dot(n,sub(ctr,B.e))>0)n=[-n[0],-n[1],-n[2]];
+            var lam=0.5+0.5*Math.max(0,dot(n,Ld)),z=(vs[f[0]][2]+vs[f[1]][2]+vs[f[2]][2]+vs[f[3]][2])/4;
+            polys.push({z:z,pts:f.map(function(k){return proj(vs[k]);}),col:shade(col,lam)});
+          });
+        });
+        polys.sort(function(a,b){return b.z-a.z;});
+        ctx.lineWidth=0.6;ctx.strokeStyle='rgba(0,0,0,.25)';
+        polys.forEach(function(p){ctx.beginPath();ctx.moveTo(p.pts[0][0],p.pts[0][1]);for(var k=1;k<4;k++)ctx.lineTo(p.pts[k][0],p.pts[k][1]);ctx.closePath();ctx.fillStyle=p.col;ctx.fill();ctx.stroke();});
+      },
+      project:function(p){if(!B)basis();var v=view(p);if(v[2]<1)return null;return proj(v);},
+      theme:function(){}
+    };
+  }
+
+  // ---------- boot ----------
+  var stage=$('#stage'),labelsEl=$('#labels');
+  function mkCanvas(){var c=document.createElement('canvas');stage.insertBefore(c,stage.firstChild);return c;}
+  var R=null;
+  try{R=makeThree(mkCanvas());}
+  catch(e){
+    var old=stage.querySelector('canvas');if(old)old.remove();
+    try{R=make2D(mkCanvas());$('#badge').hidden=false;}catch(e2){R=null;}
+  }
+  if(!R){var p=document.createElement('p');p.className='fail';p.textContent='This browser blocked drawing on the page, so the model can’t display here.';stage.appendChild(p);return;}
+
+  LABELS.forEach(function(L){var d=document.createElement('div');d.className='lbl';d.textContent=L.t;labelsEl.appendChild(d);L.el=d;});
+  function drawLabels(){
+    labelsEl.hidden=!lblOn; if(!lblOn)return;
+    LABELS.forEach(function(L){
+      var ok=!L.show||L.show(), q=ok?R.project(toWorld(L.g,L.p)):null;
+      if(!q||q[0]<8||q[0]>W-8||q[1]<20||q[1]>H-4){L.el.hidden=true;return;}
+      L.el.hidden=false;L.el.style.left=q[0]+'px';L.el.style.top=q[1]+'px';
+    });
+  }
+
+  function ui(){
+    var m=metrics(),t=Math.round(tilt);
+    $('#deg').textContent=t+'°'; $('#tilt').value=t;
+    $('#r-low').textContent=m.low.toFixed(1)+' in';
+    $('#r-high').textContent=Math.round(m.high)+' in';
+    $('#r-foot').textContent=Math.round(m.w)+' × 74 in';
+    $('#r-area').textContent=(m.w*74/144).toFixed(1)+' sq ft';
+    $('#state').textContent=tilt<0.5?'Cutting position':tilt>=89.5?'Parked':tilt>=75?'Leaning':'Tilting';
+    $('#check').textContent=tilt<0.5
+      ?'Props in and shimmed, both lock pins in the 0° holes, leveling feet down so the casters carry no load.'
+      :'Before tilting: pull both red props, jog the X carriage to the low end, strap the gantry. Lock pins go back in at 80° or 90°.';
+    document.querySelectorAll('#presets button').forEach(function(b){b.setAttribute('aria-pressed',String(+b.dataset.t===t));});
+  }
+  function setTilt(v){tilt=Math.max(0,Math.min(90,v));ui();dirty=true;}
+  var anim=0;
+  function tweenTo(to){
+    cancelAnimationFrame(anim);
+    if(reduce){setTilt(to);return;}
+    var from=tilt,t0=performance.now(),dur=250+900*Math.abs(to-from)/90;
+    function step(now){var k=Math.min(1,(now-t0)/dur),e=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2;setTilt(from+(to-from)*e);if(k<1)anim=requestAnimationFrame(step);}
+    anim=requestAnimationFrame(step);
+  }
+  $('#tilt').addEventListener('input',function(e){cancelAnimationFrame(anim);setTilt(+e.target.value);});
+  document.querySelectorAll('#presets button').forEach(function(b){b.addEventListener('click',function(){tweenTo(+b.dataset.t);});});
+  document.querySelectorAll('#views button').forEach(function(b){b.addEventListener('click',function(){
+    var v=VIEWS[b.dataset.v];cam.th=v.th;cam.ph=v.ph;dirty=true;
+    document.querySelectorAll('#views button').forEach(function(x){x.setAttribute('aria-pressed',String(x===b));});
+  });});
+  $('#lbl').addEventListener('change',function(e){lblOn=e.target.checked;dirty=true;});
+
+  // orbit + pinch
+  var ptrs=new Map(),pinch=0;
+  function clearView(){document.querySelectorAll('#views button').forEach(function(x){x.setAttribute('aria-pressed','false');});}
+  stage.addEventListener('pointerdown',function(e){try{stage.setPointerCapture(e.pointerId);}catch(_){}ptrs.set(e.pointerId,[e.clientX,e.clientY]);});
+  stage.addEventListener('pointermove',function(e){
+    if(!ptrs.has(e.pointerId))return;
+    var prev=ptrs.get(e.pointerId),cur=[e.clientX,e.clientY];ptrs.set(e.pointerId,cur);
+    if(ptrs.size===1){cam.th-=(cur[0]-prev[0])*0.008;cam.ph=Math.max(0.25,Math.min(1.52,cam.ph-(cur[1]-prev[1])*0.008));clearView();}
+    else if(ptrs.size===2){var v=Array.from(ptrs.values()),d=Math.hypot(v[0][0]-v[1][0],v[0][1]-v[1][1]);if(pinch)cam.r=Math.max(90,Math.min(340,cam.r*pinch/d));pinch=d;}
+    dirty=true;
+  });
+  function up(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=0;}
+  stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+  stage.addEventListener('wheel',function(e){e.preventDefault();cam.r=Math.max(90,Math.min(340,cam.r*(1+e.deltaY*0.001)));dirty=true;},{passive:false});
+
+  // theme changes
+  function retheme(){R.theme();dirty=true;}
+  if(window.matchMedia){var mq=matchMedia('(prefers-color-scheme: dark)');if(mq.addEventListener)mq.addEventListener('change',retheme);}
+  new MutationObserver(retheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+  // sizing + render loop
+  function resize(){W=Math.max(1,stage.clientWidth);H=Math.max(1,stage.clientHeight);if(W/H<1.05)cam.r=Math.max(cam.r,215);R.resize(W,H);dirty=true;}
+  if(window.ResizeObserver)new ResizeObserver(resize).observe(stage);else window.addEventListener('resize',resize);
+  resize();ui();
+  (function loop(){if(dirty){dirty=false;R.draw();drawLabels();}requestAnimationFrame(loop);})();
+})();
+</script>
